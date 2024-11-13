@@ -1,7 +1,10 @@
+using HotelListing;
 using HotelListing.Configurations;
 using HotelListing.Data;
 using HotelListing.IRepository;
 using HotelListing.Repository;
+using HotelListing.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,9 +27,15 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("sqlConnection"),
     new MySqlServerVersion(new Version(8, 0, 23))));
 
+// Configure Identity
+builder.Services.AddAuthentication();
+builder.Services.ConfigureIdentity();
+builder.Services.ConfigureJWT(builder.Configuration);
+
 builder.Services.AddAutoMapper(typeof(MapperInitializer));
 
 builder.Services.AddTransient<IUnitofWork, UnitofWork>();
+builder.Services.AddScoped<IAuthManager, AuthManager>();
 
 var app = builder.Build();
 
@@ -41,6 +50,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 //app.UseEndpoints(endpoints =>
