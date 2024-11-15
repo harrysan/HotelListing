@@ -2,9 +2,11 @@
 using HotelListing.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace HotelListing.Services
@@ -65,11 +67,13 @@ namespace HotelListing.Services
         private SigningCredentials GetSigningCredentials()
         {
             var jwtSettings = _configuration.GetSection("Jwt");
-            var key = Environment.GetEnvironmentVariable("KEY");
+            //var key = Environment.GetEnvironmentVariable("KEY");
+            var key = jwtSettings["Key"];
 
-            if (string.IsNullOrEmpty(key)) 
+            if (key.Length < 32 || string.IsNullOrEmpty(key))
             {
-                key = jwtSettings["Key"];
+                //key = jwtSettings["Key"];
+                throw new Exception("The secret key cant be null or the secret key must be at least 256 bits (32 characters) long.");
             }
 
             var secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
