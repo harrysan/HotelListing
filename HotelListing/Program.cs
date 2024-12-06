@@ -1,3 +1,4 @@
+using AspNetCoreRateLimit;
 using HotelListing;
 using HotelListing.Configurations;
 using HotelListing.Data;
@@ -5,13 +6,21 @@ using HotelListing.IRepository;
 using HotelListing.Repository;
 using HotelListing.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers().AddNewtonsoftJson(op =>
+builder.Services.AddControllers(config =>
+{
+    config.CacheProfiles.Add("120SecondsDuration", new CacheProfile
+    {
+        Duration = 120
+    });
+})
+        .AddNewtonsoftJson(op =>
     op.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -58,6 +67,16 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("sqlConnection"),
     new MySqlServerVersion(new Version(8, 0, 23))));
 
+// Configure Caching
+builder.Services.AddMemoryCache();
+
+// Configure Rate Limiting
+builder.Services.ConfigureRateLimiting();
+builder.Services.AddHttpContextAccessor();
+
+// Configure Caching
+builder.Services.ConfigureHttpCacheHeaders();
+
 // Configure Identity
 builder.Services.AddAuthentication();
 builder.Services.ConfigureIdentity();
@@ -68,7 +87,12 @@ builder.Services.AddAutoMapper(typeof(MapperInitializer));
 builder.Services.AddTransient<IUnitofWork, UnitofWork>();
 builder.Services.AddScoped<IAuthManager, AuthManager>();
 
+// Configure Versioning
+builder.Services.ConfigureVersioning();
+
 var app = builder.Build();
+
+app.ConfigureExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -80,6 +104,11 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
+
+app.UseResponseCaching();
+app.UseHttpCacheHeaders();
+app.UseIpRateLimiting();
+//app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
